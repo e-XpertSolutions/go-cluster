@@ -45,7 +45,6 @@ func InitCao(X *mat.Dense, clustersNumber int, distFunc DistanceFunction) (*mat.
 	xRows, xCols := X.Dims()
 	centroids := mat.NewDense(clustersNumber, xCols, nil)
 
-	fmt.Println("Computing density table")
 	// Compute density table and, int the same time find index of vector with
 	// the highest density.
 	highestDensityIndex := 0
@@ -68,18 +67,14 @@ func InitCao(X *mat.Dense, clustersNumber int, distFunc DistanceFunction) (*mat.
 		}
 	}
 
-	//fmt.Println("Density table: ", densityTable)
-	fmt.Println("Choosing first cluster center")
-	//choose first cluster - vector with maximum density
+	// Choose first cluster - vector with maximum density.
 	centroids.SetRow(0, X.RawRowView(highestDensityIndex))
 
-	fmt.Println("Choosing second cluster center")
 	// Find second cluster: maximum value of {distance between vector x in X and
 	// cluster center-centroids(0) multiplied by density of vector x}
 	maxValue := 0.0
 	maxValueIndex := 0
 	for i := 0; i < xRows; i++ {
-
 		dist, err := distFunc(X.RowView(i).(*mat.VecDense), centroids.RowView(0).(*mat.VecDense))
 		if err != nil {
 			return mat.NewDense(0, 0, nil), fmt.Errorf("cao init: cannot compute second cluster: %v ", err)
@@ -92,9 +87,8 @@ func InitCao(X *mat.Dense, clustersNumber int, distFunc DistanceFunction) (*mat.
 	}
 	centroids.SetRow(1, X.RawRowView(maxValueIndex))
 
-	//find the rest of clusters centers
+	// Find the rest of clusters centers.
 	for i := 2; i < clustersNumber; i++ {
-		fmt.Printf("Choosing %d cluster center \n", i+1)
 		dd := make([][]float64, i)
 		for z := 0; z < i; z++ {
 			dd[z] = make([]float64, xRows)
@@ -134,7 +128,6 @@ func InitCao(X *mat.Dense, clustersNumber int, distFunc DistanceFunction) (*mat.
 		}
 
 		centroids.SetRow(i, X.RawRowView(indexMax))
-
 	}
 
 	return centroids, nil

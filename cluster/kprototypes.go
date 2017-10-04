@@ -173,26 +173,22 @@ func (km *KPrototypes) FitModel(X *mat.Dense) error {
 	//lastCost = math.MaxFloat64
 
 	for i := 0; i < km.MaxIterationNumber; i++ {
-		fmt.Printf("Iteration: %d. ", i)
-		cost, change, err := km.iteration(xNum, xCat)
+		_, change, err := km.iteration(xNum, xCat)
 		if err != nil {
 			return fmt.Errorf("KMeans error at iteration %d: %v", i, err)
 		}
-		fmt.Printf("Cost: %f \n", cost)
 		//lastCost = cost
 		//if cost > lastCost || change == false {
 		if change == false {
 			km.IsFitted = true
 			return nil
 		}
-
 	}
 
 	return nil
 }
 
 func (km *KPrototypes) iteration(xNum, xCat *mat.Dense) (float64, bool, error) {
-
 	changed := make([]bool, km.ClustersNumber)
 	var change bool
 	var numOfChanges float64
@@ -223,7 +219,7 @@ func (km *KPrototypes) iteration(xNum, xCat *mat.Dense) (float64, bool, error) {
 			km.LabelsCounter[int(newLabel)]++
 			km.LabelsCounter[int(km.Labels.At(i, 0))]--
 
-			//make changes in frequency table
+			// Make changes in frequency table.
 			for j := 0; j < xColsCat; j++ {
 				km.FrequencyTable[int(km.Labels.At(i, 0))][j][rowCat.At(j, 0)]--
 				km.FrequencyTable[int(newLabel)][j][rowCat.At(j, 0)]++

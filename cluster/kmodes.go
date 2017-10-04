@@ -53,10 +53,12 @@ func (km *KModes) FitModel(X *mat.Dense) error {
 	if km.ClustersNumber < 1 || km.MaxIterationNumber < 1 || km.RunsNumber < 1 {
 		return errors.New("kmodes: failed to fit the model: wrong initialization parameters (should be >1)")
 	}
+
 	// Initialize weightVector
 	SetWeights(km.WeightVectors[0])
 
 	xRows, xCols := X.Dims()
+
 	// Initialize clusters
 	var err error
 	km.ClusterCentroids, err = km.InitializationFunc(X, km.ClustersNumber, km.DistanceFunc)
@@ -114,12 +116,10 @@ func (km *KModes) FitModel(X *mat.Dense) error {
 	//lastCost = math.MaxFloat64
 
 	for i := 0; i < km.MaxIterationNumber; i++ {
-		fmt.Printf("Iteration: %d. ", i)
-		cost, change, err := km.iteration(X)
+		_, change, err := km.iteration(X)
 		if err != nil {
 			return fmt.Errorf("KMeans error at iteration %d: %v", i, err)
 		}
-		fmt.Printf("Cost: %f \n", cost)
 		//lastCost = cost
 		//if cost > lastCost || change == false {
 		if change == false {
@@ -173,19 +173,14 @@ func (km *KModes) iteration(X *mat.Dense) (float64, bool, error) {
 	// and return.
 	for i := 0; i < km.ClustersNumber; i++ {
 		if km.LabelsCounter[i] == 0 {
-			fmt.Println("oh no, there is an empty cluster! ", km.ClusterCentroids.RowView(i))
-
 			vector := X.RawRowView(rand.Intn(xRows))
-			fmt.Println("New vector is: ", vector)
 			km.ClusterCentroids.SetRow(i, vector)
 			return totalCost, true, nil
 		}
 	}
 
-	//recompute cluster centers for all clusters with changes
-
+	// Recompute cluster centers for all clusters with changes.
 	for i, elem := range changed {
-
 		if elem == true {
 			//find new values for clusters centers
 			newCentroid := make([]float64, xCols)
@@ -207,7 +202,6 @@ func (km *KModes) iteration(X *mat.Dense) (float64, bool, error) {
 func (km *KModes) near(index int, vector *mat.VecDense) (float64, float64, error) {
 	var newLabel, distance float64
 	distance = math.MaxFloat64
-
 	for i := 0; i < km.ClustersNumber; i++ {
 		dist, err := km.DistanceFunc(vector, km.ClusterCentroids.RowView(i).(*mat.VecDense))
 		if err != nil {

@@ -55,9 +55,7 @@ func EuclideanDistance(a, b *mat.VecDense) (float64, error) {
 		diff := (a.At(i, 0) - b.At(i, 0))
 		distance += diff * diff
 	}
-
 	return math.Sqrt(distance), nil
-
 }
 
 // SetWeights sets the weight vector used in WeightedHammingDistance function.
@@ -84,7 +82,6 @@ func ComputeWeights(X *mat.Dense, imp float64) []float64 {
 		} else {
 			weights[i] = w
 		}
-
 	}
 	m := maxVal(weights)
 	mult := imp / m
