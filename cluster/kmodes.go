@@ -98,7 +98,7 @@ func (km *KModes) FitModel(X *mat.Dense) error {
 	// Perform initial centers update - because iteration() starts with label
 	// assignements.
 	for i := 0; i < km.ClustersNumber; i++ {
-		//find new values for clusters centers
+		// Find new values for clusters centers.
 		newCentroid := make([]float64, xCols)
 		for j := 0; j < xCols; j++ {
 			val, empty := findHighestMapValue(km.FrequencyTable[i][j])
@@ -112,16 +112,11 @@ func (km *KModes) FitModel(X *mat.Dense) error {
 		km.ClusterCentroids.SetRow(i, newCentroid)
 	}
 
-	//var lastCost float64
-	//lastCost = math.MaxFloat64
-
 	for i := 0; i < km.MaxIterationNumber; i++ {
 		_, change, err := km.iteration(X)
 		if err != nil {
 			return fmt.Errorf("KMeans error at iteration %d: %v", i, err)
 		}
-		//lastCost = cost
-		//if cost > lastCost || change == false {
 		if change == false {
 
 			km.IsFitted = true

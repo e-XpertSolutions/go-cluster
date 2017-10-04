@@ -169,16 +169,11 @@ func (km *KPrototypes) FitModel(X *mat.Dense) error {
 		km.ClusterCentroidsNum.SetRow(i, newCenter)
 	}
 
-	//var lastCost float64
-	//lastCost = math.MaxFloat64
-
 	for i := 0; i < km.MaxIterationNumber; i++ {
 		_, change, err := km.iteration(xNum, xCat)
 		if err != nil {
 			return fmt.Errorf("KMeans error at iteration %d: %v", i, err)
 		}
-		//lastCost = cost
-		//if cost > lastCost || change == false {
 		if change == false {
 			km.IsFitted = true
 			return nil
@@ -200,7 +195,6 @@ func (km *KPrototypes) iteration(xNum, xCat *mat.Dense) (float64, bool, error) {
 
 	// Find closest cluster for all data vectors - assign new labels.
 	xRowsNum, xNumCols := xNum.Dims()
-	//xRowsCat, xColsCat := xCat.Dims()
 	_, xColsCat := xCat.Dims()
 
 	for i := 0; i < xRowsNum; i++ {
@@ -234,20 +228,6 @@ func (km *KPrototypes) iteration(xNum, xCat *mat.Dense) (float64, bool, error) {
 		}
 
 	}
-
-	/*//check for empty clusters - if such cluster is found reassign the center and return
-	for i := 0; i < km.ClustersNumber; i++ {
-		if km.LabelsCounter[i] == 0 {
-			fmt.Println("oh no, there is an empty cluster! ", km.ClusterCentroidsCat.RowView(i))
-			num := rand.Intn(xRowsCat)
-			vectorCat := xCat.RawRowView(num)
-			vectorNum := xNum.RawRowView(num)
-			fmt.Println("New vectors are: ", vectorCat, vectorNum)
-			km.ClusterCentroidsCat.SetRow(i, vectorCat)
-			km.ClusterCentroidsNum.SetRow(i, vectorNum)
-			return totalCost, true, nil
-		}
-	}*/
 
 	// Recompute cluster centers for all clusters with changes.
 	for i, elem := range changed {
