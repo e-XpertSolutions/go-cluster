@@ -10,14 +10,14 @@ import (
 	"gonum.org/v1/gonum/mat"
 )
 
-//KV is a structure that holds key-value pairs of type float64
+// KV is a structure that holds key-value pairs of type float64.
 type KV struct {
 	Key   float64
 	Value float64
 }
 
-//InitHuang implements initialization of cluster centroids based on the frequency of attributes
-//as defined in paper written by Z.Huang in 1998
+// InitHuang implements initialization of cluster centroids based on the
+// frequency of attributes as defined in paper written by Z.Huang in 1998.
 func InitHuang(X *mat.Dense, clustersNumber int, distFunc DistanceFunction) (*mat.Dense, error) {
 	_, xCols := X.Dims()
 	centroids := mat.NewDense(clustersNumber, xCols, nil)
@@ -28,7 +28,9 @@ func InitHuang(X *mat.Dense, clustersNumber int, distFunc DistanceFunction) (*ma
 			if len(freqTable[i]) > j {
 				centroids.Set(j, i, freqTable[i][j].Key)
 			} else {
-				centroids.Set(j, i, freqTable[i][0].Key) //change to setting to randomly chosen value instead of first one
+				// Change to setting to randomly chosen value instead of first
+				// one.
+				centroids.Set(j, i, freqTable[i][0].Key)
 			}
 		}
 	}
@@ -36,14 +38,16 @@ func InitHuang(X *mat.Dense, clustersNumber int, distFunc DistanceFunction) (*ma
 	return centroids, nil
 }
 
-//InitCao implements initialization of cluster centroids based on the frequency and density of attributes
-//as defined in "A new initialization method for categorical data clustering" by F.Cao(2009)
+// InitCao implements initialization of cluster centroids based on the frequency
+// and density of attributes as defined in
+//    "A new initialization method for categorical data clustering" by F.Cao(2009)
 func InitCao(X *mat.Dense, clustersNumber int, distFunc DistanceFunction) (*mat.Dense, error) {
 	xRows, xCols := X.Dims()
 	centroids := mat.NewDense(clustersNumber, xCols, nil)
 
 	fmt.Println("Computing density table")
-	//Compute density table and, int the same time find index of vector with the highest density
+	// Compute density table and, int the same time find index of vector with
+	// the highest density.
 	highestDensityIndex := 0
 	maxDensity := 0.0
 	densityTable := make([]float64, xRows)
@@ -70,7 +74,8 @@ func InitCao(X *mat.Dense, clustersNumber int, distFunc DistanceFunction) (*mat.
 	centroids.SetRow(0, X.RawRowView(highestDensityIndex))
 
 	fmt.Println("Choosing second cluster center")
-	//find second cluster: maximum value of {distance between vector x in X and cluster center-centroids(0) multiplied by density of vector x}
+	// Find second cluster: maximum value of {distance between vector x in X and
+	// cluster center-centroids(0) multiplied by density of vector x}
 	maxValue := 0.0
 	maxValueIndex := 0
 	for i := 0; i < xRows; i++ {
@@ -104,7 +109,7 @@ func InitCao(X *mat.Dense, clustersNumber int, distFunc DistanceFunction) (*mat.
 			}
 		}
 
-		//find minimum value for each column
+		// Find minimum value for each column.
 		minValuesTable := make([]float64, xRows)
 		for j := 0; j < xRows; j++ {
 			minValuesTable[j] = math.MaxFloat64
@@ -118,7 +123,7 @@ func InitCao(X *mat.Dense, clustersNumber int, distFunc DistanceFunction) (*mat.
 			}
 		}
 
-		//find max value and its index among minValuesTable
+		// Find max value and its index among minValuesTable.
 		maxVal := 0.0
 		indexMax := 0
 		for j := 0; j < xRows; j++ {
@@ -135,7 +140,7 @@ func InitCao(X *mat.Dense, clustersNumber int, distFunc DistanceFunction) (*mat.
 	return centroids, nil
 }
 
-//InitRandom randomly initializes cluster centers - vectors chosen from X table
+// InitRandom randomly initializes cluster centers - vectors chosen from X table.
 func InitRandom(X *mat.Dense, clustersNumber int, distFunc DistanceFunction) (*mat.Dense, error) {
 	xRows, xCols := X.Dims()
 	centroids := mat.NewDense(clustersNumber, xCols, nil)
@@ -147,7 +152,8 @@ func InitRandom(X *mat.Dense, clustersNumber int, distFunc DistanceFunction) (*m
 	return centroids, nil
 }
 
-// InitNum initializes cluster centers for numerical data - random initialization
+// InitNum initializes cluster centers for numerical data - random
+// initialization.
 func InitNum(X *mat.Dense, clustersNumber int, distFunc DistanceFunction) (*mat.Dense, error) {
 	xRows, xCols := X.Dims()
 	centroids := mat.NewDense(clustersNumber, xCols, nil)
@@ -160,7 +166,8 @@ func InitNum(X *mat.Dense, clustersNumber int, distFunc DistanceFunction) (*mat.
 	return centroids, nil
 }
 
-//CreateFrequencyTable creates frequency table for attributes in given matrix, it returns attributes in frequency descending order
+// CreateFrequencyTable creates frequency table for attributes in given matrix,
+// it returns attributes in frequency descending order.
 func CreateFrequencyTable(X *mat.Dense) [][]KV {
 	xRows, xCols := X.Dims()
 	frequencyTable := make([][]KV, xCols)

@@ -12,7 +12,8 @@ import (
 	"gonum.org/v1/gonum/mat"
 )
 
-// KPrototypes is a basic class for the k-prototypes algorithm, it contains all necessary information as alg. parameters, labels, centroids,
+// KPrototypes is a basic class for the k-prototypes algorithm, it contains all
+// necessary information as alg. parameters, labels, centroids, ...
 type KPrototypes struct {
 	DistanceFunc        DistanceFunction
 	InitializationFunc  InitializationFunction
@@ -21,8 +22,8 @@ type KPrototypes struct {
 	RunsNumber          int
 	MaxIterationNumber  int
 	WeightVectors       [][]float64
-	FrequencyTable      [][]map[float64]float64 //frequency table - list of lists with dictionaries containing frequencies of values per cluster and attribute
-	MembershipNumTable  [][]float64             //mambership table for numeric attributes - list of labels for each cluster
+	FrequencyTable      [][]map[float64]float64 // frequency table - list of lists with dictionaries containing frequencies of values per cluster and attribute
+	MembershipNumTable  [][]float64             // membership table for numeric attributes - list of labels for each cluster
 	LabelsCounter       []int
 	Labels              *mat.VecDense
 	ClusterCentroids    *mat.Dense
@@ -33,13 +34,14 @@ type KPrototypes struct {
 	ModelPath           string
 }
 
-//NewKPrototypes implements constructor for the KPrototypes struct
+// NewKPrototypes implements constructor for the KPrototypes struct.
 func NewKPrototypes(dist DistanceFunction, init InitializationFunction, categorical []int, clusters int, runs int, iters int, weights [][]float64, g float64, modelPath string) *KPrototypes {
 	rand.Seed(time.Now().UnixNano())
 	return &KPrototypes{DistanceFunc: dist, InitializationFunc: init, ClustersNumber: clusters, CategoricalInd: categorical, RunsNumber: runs, MaxIterationNumber: iters, Gamma: g, WeightVectors: weights, ModelPath: modelPath}
 }
 
-//FitModel main algorithm function which finds the best clusters centers for the given dataset X
+// FitModel main algorithm function which finds the best clusters centers for
+// the given dataset X.
 func (km *KPrototypes) FitModel(X *mat.Dense) error {
 	if km.InitializationFunc == nil {
 		return errors.New("kprototypes: failed to fit the model: InitializationFunction is nil")
@@ -52,7 +54,8 @@ func (km *KPrototypes) FitModel(X *mat.Dense) error {
 	}
 	xRows, xCols := X.Dims()
 
-	//partition data on two sets - one with categorical, other with numerical data
+	// Partition data on two sets - one with categorical, other with numerical
+	// data.
 	xCat := mat.NewDense(xRows, len(km.CategoricalInd), nil)
 	xNum := mat.NewDense(xRows, xCols-len(km.CategoricalInd), nil)
 	var lastCat, lastNum int
@@ -75,27 +78,27 @@ func (km *KPrototypes) FitModel(X *mat.Dense) error {
 	_, xCatCols := xCat.Dims()
 	_, xNumCols := xNum.Dims()
 
-	//normalize numerical values
+	// Normalize numerical values.
 	xNum = normalizeNum(xNum)
 
-	//Initialize weightVector
+	// Initialize weightVector.
 	SetWeights(km.WeightVectors[0])
 
-	//Initialize clusters for categorical data
+	// Initialize clusters for categorical data.
 	var err error
 	km.ClusterCentroidsCat, err = km.InitializationFunc(xCat, km.ClustersNumber, km.DistanceFunc)
 	if err != nil {
 		return fmt.Errorf("kmodes: failed to fit the model: %v", err)
 	}
 
-	//initialize clusters for numerical data
+	// Initialize clusters for numerical data.
 	km.ClusterCentroidsNum, err = InitNum(xNum, km.ClustersNumber, km.DistanceFunc)
 
-	//Initialize labels vector
+	// Initialize labels vector
 	km.Labels = mat.NewVecDense(xRows, nil)
 	km.LabelsCounter = make([]int, km.ClustersNumber)
 
-	//create frequency table for categorical data
+	// Create frequency table for categorical data.
 	km.FrequencyTable = make([][]map[float64]float64, km.ClustersNumber)
 	for i := range km.FrequencyTable {
 		km.FrequencyTable[i] = make([]map[float64]float64, xCatCols)
@@ -103,13 +106,15 @@ func (km *KPrototypes) FitModel(X *mat.Dense) error {
 			km.FrequencyTable[i][j] = make(map[float64]float64)
 		}
 	}
-	//create membership table
+
+	// Create membership table.
 	km.MembershipNumTable = make([][]float64, km.ClustersNumber)
 	for i := range km.MembershipNumTable {
 		km.MembershipNumTable[i] = make([]float64, 0, 100)
 	}
 
-	//Perform initial assignements to clusters - in order to fill in frequency table
+	// Perform initial assignements to clusters - in order to fill in frequency
+	// table.
 	for i := 0; i < xRows; i++ {
 		rowCat := xCat.RowView(i).(*mat.VecDense)
 		rowNum := xNum.RowView(i).(*mat.VecDense)
@@ -126,9 +131,10 @@ func (km *KPrototypes) FitModel(X *mat.Dense) error {
 
 	}
 
-	//Perform initial centers update - because iteration() starts with label assignements
+	// Perform initial centers update - because iteration() starts with label
+	// assignements.
 	for i := 0; i < km.ClustersNumber; i++ {
-		//find new values for clusters centers
+		// Find new values for clusters centers.
 		newCatCentroid := make([]float64, xCatCols)
 
 		for j := 0; j < xCatCols; j++ {
@@ -176,7 +182,6 @@ func (km *KPrototypes) FitModel(X *mat.Dense) error {
 		//lastCost = cost
 		//if cost > lastCost || change == false {
 		if change == false {
-
 			km.IsFitted = true
 			return nil
 		}
@@ -197,7 +202,7 @@ func (km *KPrototypes) iteration(xNum, xCat *mat.Dense) (float64, bool, error) {
 		km.MembershipNumTable[i] = nil
 	}
 
-	//find closest cluster for all data vectors - assign new labels
+	// Find closest cluster for all data vectors - assign new labels.
 	xRowsNum, xNumCols := xNum.Dims()
 	//xRowsCat, xColsCat := xCat.Dims()
 	_, xColsCat := xCat.Dims()
@@ -248,11 +253,10 @@ func (km *KPrototypes) iteration(xNum, xCat *mat.Dense) (float64, bool, error) {
 		}
 	}*/
 
-	//recompute cluster centers for all clusters with changes
+	// Recompute cluster centers for all clusters with changes.
 	for i, elem := range changed {
-
 		if elem == true {
-			//find new values for clusters centers
+			// Find new values for clusters centers.
 			newCentroid := make([]float64, xColsCat)
 			for j := 0; j < xColsCat; j++ {
 				val, empty := findHighestMapValue(km.FrequencyTable[i][j])
@@ -311,7 +315,7 @@ func (km *KPrototypes) near(index int, vectorCat, vectorNum *mat.VecDense) (floa
 	return newLabel, distance, nil
 }
 
-//Predict assign labels for the set of new vectors
+// Predict assign labels for the set of new vectors.
 func (km *KPrototypes) Predict(X *mat.Dense) (*mat.VecDense, error) {
 	if km.IsFitted != true {
 		return mat.NewVecDense(0, nil), errors.New("kmodes: cannot predict labels, model is not fitted yet")
@@ -319,7 +323,7 @@ func (km *KPrototypes) Predict(X *mat.Dense) (*mat.VecDense, error) {
 	xRows, xCols := X.Dims()
 	labelsVec := mat.NewVecDense(xRows, nil)
 
-	//split data on categorical and numerical
+	// Split data on categorical and numerical.
 	xCat := mat.NewDense(xRows, len(km.CategoricalInd), nil)
 	xNum := mat.NewDense(xRows, xCols-len(km.CategoricalInd), nil)
 	var lastCat, lastNum int
@@ -339,7 +343,7 @@ func (km *KPrototypes) Predict(X *mat.Dense) (*mat.VecDense, error) {
 		}
 	}
 
-	//normalize numerical values
+	// Normalize numerical values.
 	xNum = normalizeNum(xNum)
 
 	for i := 0; i < xRows; i++ {
@@ -355,7 +359,8 @@ func (km *KPrototypes) Predict(X *mat.Dense) (*mat.VecDense, error) {
 	return labelsVec, nil
 }
 
-//SaveModel saves computed ml model (KPrototypes struct) in file specified in configuration
+// SaveModel saves computed ml model (KPrototypes struct) in file specified in
+// configuration.
 func (km *KPrototypes) SaveModel() error {
 	file, err := os.Create(km.ModelPath)
 	if err == nil {
@@ -366,7 +371,8 @@ func (km *KPrototypes) SaveModel() error {
 	return err
 }
 
-//LoadModel loads model (KPrototypes struct) from file, it is invoked while 'training mode' is not used
+// LoadModel loads model (KPrototypes struct) from file, it is invoked while
+// 'training mode' is not used.
 func (km *KPrototypes) LoadModel() error {
 	file, err := os.Open(km.ModelPath)
 	if err == nil {
