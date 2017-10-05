@@ -347,8 +347,7 @@ func (km *KPrototypes) SaveModel() error {
 	return err
 }
 
-// LoadModel loads model (KPrototypes struct) from file, it is invoked while
-// 'training mode' is not used.
+// LoadModel loads model (KPrototypes struct) from file.
 func (km *KPrototypes) LoadModel() error {
 	file, err := os.Open(km.ModelPath)
 	if err == nil {
