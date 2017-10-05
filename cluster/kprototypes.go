@@ -93,6 +93,9 @@ func (km *KPrototypes) FitModel(X *mat.Dense) error {
 
 	// Initialize clusters for numerical data.
 	km.ClusterCentroidsNum, err = InitNum(xNum, km.ClustersNumber, km.DistanceFunc)
+	if err != nil {
+		return fmt.Errorf("kmodes: failed to initialiaze cluster centers for numerical data: %v", err)
+	}
 
 	// Initialize labels vector
 	km.Labels = mat.NewVecDense(xRows, nil)
