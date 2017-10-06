@@ -25,10 +25,10 @@ type KPrototypes struct {
 	FrequencyTable      [][]map[float64]float64 // frequency table - list of lists with dictionaries containing frequencies of values per cluster and attribute
 	MembershipNumTable  [][]float64             // membership table for numeric attributes - list of labels for each cluster
 	LabelsCounter       []int
-	Labels              *mat.VecDense
-	ClusterCentroids    *mat.Dense
-	ClusterCentroidsCat *mat.Dense
-	ClusterCentroidsNum *mat.Dense
+	Labels              *DenseVector
+	ClusterCentroids    *DenseMatrix
+	ClusterCentroidsCat *DenseMatrix
+	ClusterCentroidsNum *DenseMatrix
 	Gamma               float64
 	IsFitted            bool
 	ModelPath           string
@@ -37,43 +37,34 @@ type KPrototypes struct {
 // NewKPrototypes implements constructor for the KPrototypes struct.
 func NewKPrototypes(dist DistanceFunction, init InitializationFunction, categorical []int, clusters int, runs int, iters int, weights [][]float64, g float64, modelPath string) *KPrototypes {
 	rand.Seed(time.Now().UnixNano())
-	return &KPrototypes{DistanceFunc: dist, InitializationFunc: init, ClustersNumber: clusters, CategoricalInd: categorical, RunsNumber: runs, MaxIterationNumber: iters, Gamma: g, WeightVectors: weights, ModelPath: modelPath}
+	return &KPrototypes{DistanceFunc: dist,
+		InitializationFunc:  init,
+		ClustersNumber:      clusters,
+		CategoricalInd:      categorical,
+		RunsNumber:          runs,
+		MaxIterationNumber:  iters,
+		Gamma:               g,
+		WeightVectors:       weights,
+		ModelPath:           modelPath,
+		Labels:              &DenseVector{VecDense: new(mat.VecDense)},
+		ClusterCentroidsCat: &DenseMatrix{Dense: new(mat.Dense)},
+		ClusterCentroidsNum: &DenseMatrix{Dense: new(mat.Dense)},
+	}
 }
 
 // FitModel main algorithm function which finds the best clusters centers for
 // the given dataset X.
-func (km *KPrototypes) FitModel(X *mat.Dense) error {
-	if km.InitializationFunc == nil {
-		return errors.New("kprototypes: failed to fit the model: InitializationFunction is nil")
-	}
-	if km.DistanceFunc == nil {
-		return errors.New("kprototypes: failed to fit the model: DistanceFunction is nil")
-	}
-	if km.ClustersNumber < 1 || km.MaxIterationNumber < 1 || km.RunsNumber < 1 {
-		return errors.New("kprototypes: failed to fit the model: wrong initialization parameters (should be >1)")
+func (km *KPrototypes) FitModel(X *DenseMatrix) error {
+
+	err := km.validateParameters()
+	if err != nil {
+		return fmt.Errorf("kmodes: failed to fit the model: %v", err)
 	}
 	xRows, xCols := X.Dims()
 
 	// Partition data on two sets - one with categorical, other with numerical
 	// data.
-	xCat := mat.NewDense(xRows, len(km.CategoricalInd), nil)
-	xNum := mat.NewDense(xRows, xCols-len(km.CategoricalInd), nil)
-	var lastCat, lastNum int
-	for i := 0; i < xCols; i++ {
-		vec := make([]float64, xRows)
-		vec = mat.Col(vec, i, X)
-
-		if km.CategoricalInd[lastCat] == i {
-			xCat.SetCol(lastCat, vec)
-			lastCat++
-			if lastCat >= len(km.CategoricalInd) {
-				lastCat--
-			}
-		} else {
-			xNum.SetCol(lastNum, vec)
-			lastNum++
-		}
-	}
+	xCat, xNum := km.partitionData(xRows, xCols, X)
 
 	_, xCatCols := xCat.Dims()
 	_, xNumCols := xNum.Dims()
@@ -85,7 +76,6 @@ func (km *KPrototypes) FitModel(X *mat.Dense) error {
 	SetWeights(km.WeightVectors[0])
 
 	// Initialize clusters for categorical data.
-	var err error
 	km.ClusterCentroidsCat, err = km.InitializationFunc(xCat, km.ClustersNumber, km.DistanceFunc)
 	if err != nil {
 		return fmt.Errorf("kmodes: failed to fit the model: %v", err)
@@ -98,7 +88,7 @@ func (km *KPrototypes) FitModel(X *mat.Dense) error {
 	}
 
 	// Initialize labels vector
-	km.Labels = mat.NewVecDense(xRows, nil)
+	km.Labels = NewDenseVector(xRows, nil)
 	km.LabelsCounter = make([]int, km.ClustersNumber)
 
 	// Create frequency table for categorical data.
@@ -119,8 +109,8 @@ func (km *KPrototypes) FitModel(X *mat.Dense) error {
 	// Perform initial assignements to clusters - in order to fill in frequency
 	// table.
 	for i := 0; i < xRows; i++ {
-		rowCat := xCat.RowView(i).(*mat.VecDense)
-		rowNum := xNum.RowView(i).(*mat.VecDense)
+		rowCat := xCat.RowView(i).(*DenseVector)
+		rowNum := xNum.RowView(i).(*DenseVector)
 		newLabel, _, err := km.near(i, rowCat, rowNum)
 		km.Labels.SetVec(i, newLabel)
 		km.LabelsCounter[int(newLabel)]++
@@ -138,40 +128,9 @@ func (km *KPrototypes) FitModel(X *mat.Dense) error {
 	// assignements.
 	for i := 0; i < km.ClustersNumber; i++ {
 		// Find new values for clusters centers.
-		newCatCentroid := make([]float64, xCatCols)
+		km.findNewCenters(xCatCols, xNumCols, i, xNum)
 
-		for j := 0; j < xCatCols; j++ {
-			val, empty := findHighestMapValue(km.FrequencyTable[i][j])
-			if !empty {
-				newCatCentroid[j] = val
-			} else {
-				newCatCentroid[j] = km.ClusterCentroidsCat.At(i, j)
-			}
-		}
-		km.ClusterCentroidsCat.SetRow(i, newCatCentroid)
 	}
-
-	//newNumCentroid := make([]float64, xNumCols)
-	vecSum := make([]*mat.VecDense, km.ClustersNumber)
-	for i := 0; i < km.ClustersNumber; i++ {
-		vecSum[i] = mat.NewVecDense(xNumCols, nil)
-	}
-
-	for i := 0; i < km.ClustersNumber; i++ {
-		newCenter := make([]float64, xNumCols)
-		for j := 0; j < km.LabelsCounter[i]; j++ {
-			for k := 0; k < xNumCols; k++ {
-				vecSum[i].SetVec(k, vecSum[i].At(k, 0)+xNum.At(int(km.MembershipNumTable[i][j]), k))
-			}
-
-		}
-		for l := 0; l < xNumCols; l++ {
-
-			newCenter[l] = vecSum[i].At(l, 0) / float64(km.LabelsCounter[i])
-		}
-		km.ClusterCentroidsNum.SetRow(i, newCenter)
-	}
-
 	for i := 0; i < km.MaxIterationNumber; i++ {
 		_, change, err := km.iteration(xNum, xCat)
 		if err != nil {
@@ -186,7 +145,30 @@ func (km *KPrototypes) FitModel(X *mat.Dense) error {
 	return nil
 }
 
-func (km *KPrototypes) iteration(xNum, xCat *mat.Dense) (float64, bool, error) {
+func (km *KPrototypes) partitionData(xRows, xCols int, X *DenseMatrix) (*DenseMatrix, *DenseMatrix) {
+	xCat := NewDenseMatrix(xRows, len(km.CategoricalInd), nil)
+	xNum := NewDenseMatrix(xRows, xCols-len(km.CategoricalInd), nil)
+	var lastCat, lastNum int
+	for i := 0; i < xCols; i++ {
+		vec := make([]float64, xRows)
+		vec = mat.Col(vec, i, X)
+
+		if km.CategoricalInd[lastCat] == i {
+			xCat.SetCol(lastCat, vec)
+			lastCat++
+			if lastCat >= len(km.CategoricalInd) {
+				lastCat--
+			}
+		} else {
+			xNum.SetCol(lastNum, vec)
+			lastNum++
+		}
+	}
+
+	return xCat, xNum
+}
+
+func (km *KPrototypes) iteration(xNum, xCat *DenseMatrix) (float64, bool, error) {
 	changed := make([]bool, km.ClustersNumber)
 	var change bool
 	var numOfChanges float64
@@ -201,8 +183,8 @@ func (km *KPrototypes) iteration(xNum, xCat *mat.Dense) (float64, bool, error) {
 	_, xColsCat := xCat.Dims()
 
 	for i := 0; i < xRowsNum; i++ {
-		rowCat := xCat.RowView(i).(*mat.VecDense)
-		rowNum := xNum.RowView(i).(*mat.VecDense)
+		rowCat := xCat.RowView(i).(*DenseVector)
+		rowNum := xNum.RowView(i).(*DenseVector)
 		newLabel, cost, err := km.near(i, rowCat, rowNum)
 		if err != nil {
 			return totalCost, change, fmt.Errorf("iteration error: %v", err)
@@ -236,52 +218,57 @@ func (km *KPrototypes) iteration(xNum, xCat *mat.Dense) (float64, bool, error) {
 	for i, elem := range changed {
 		if elem == true {
 			// Find new values for clusters centers.
-			newCentroid := make([]float64, xColsCat)
-			for j := 0; j < xColsCat; j++ {
-				val, empty := findHighestMapValue(km.FrequencyTable[i][j])
-				if !empty {
-					newCentroid[j] = val
-				} else {
-					newCentroid[j] = km.ClusterCentroidsCat.At(i, j)
-				}
-			}
-			km.ClusterCentroidsCat.SetRow(i, newCentroid)
+			km.findNewCenters(xColsCat, xNumCols, i, xNum)
 
-			vecSum := make([]*mat.VecDense, km.ClustersNumber)
-			for a := 0; a < km.ClustersNumber; a++ {
-				vecSum[a] = mat.NewVecDense(xNumCols, nil)
-			}
-
-			for a := 0; a < km.ClustersNumber; a++ {
-				newCenter := make([]float64, xNumCols)
-				for j := 0; j < km.LabelsCounter[a]; j++ {
-					for k := 0; k < xNumCols; k++ {
-						vecSum[a].SetVec(k, vecSum[a].At(k, 0)+xNum.At(int(km.MembershipNumTable[a][j]), k))
-					}
-
-				}
-				for l := 0; l < xNumCols; l++ {
-					newCenter[l] = vecSum[a].At(l, 0) / float64(km.LabelsCounter[a])
-				}
-
-				km.ClusterCentroidsNum.SetRow(a, newCenter)
-			}
 		}
 	}
 
 	return totalCost, change, nil
 }
 
-func (km *KPrototypes) near(index int, vectorCat, vectorNum *mat.VecDense) (float64, float64, error) {
+func (km *KPrototypes) findNewCenters(xColsCat, xNumCols, i int, xNum *DenseMatrix) {
+	newCentroid := make([]float64, xColsCat)
+	for j := 0; j < xColsCat; j++ {
+		val, empty := findHighestMapValue(km.FrequencyTable[i][j])
+		if !empty {
+			newCentroid[j] = val
+		} else {
+			newCentroid[j] = km.ClusterCentroidsCat.At(i, j)
+		}
+	}
+	km.ClusterCentroidsCat.SetRow(i, newCentroid)
+
+	vecSum := make([]*mat.VecDense, km.ClustersNumber)
+	for a := 0; a < km.ClustersNumber; a++ {
+		vecSum[a] = mat.NewVecDense(xNumCols, nil)
+	}
+
+	for a := 0; a < km.ClustersNumber; a++ {
+		newCenter := make([]float64, xNumCols)
+		for j := 0; j < km.LabelsCounter[a]; j++ {
+			for k := 0; k < xNumCols; k++ {
+				vecSum[a].SetVec(k, vecSum[a].At(k, 0)+xNum.At(int(km.MembershipNumTable[a][j]), k))
+			}
+
+		}
+		for l := 0; l < xNumCols; l++ {
+			newCenter[l] = vecSum[a].At(l, 0) / float64(km.LabelsCounter[a])
+		}
+
+		km.ClusterCentroidsNum.SetRow(a, newCenter)
+	}
+}
+
+func (km *KPrototypes) near(index int, vectorCat, vectorNum *DenseVector) (float64, float64, error) {
 	var newLabel, distance float64
 	distance = math.MaxFloat64
 
 	for i := 0; i < km.ClustersNumber; i++ {
-		distCat, err := km.DistanceFunc(vectorCat, km.ClusterCentroidsCat.RowView(i).(*mat.VecDense))
+		distCat, err := km.DistanceFunc(vectorCat, km.ClusterCentroidsCat.RowView(i).(*DenseVector))
 		if err != nil {
 			return -1, -1, fmt.Errorf("Cannot compute nearest cluster for vector %q: %v", index, err)
 		}
-		distNum, err := EuclideanDistance(vectorNum, km.ClusterCentroidsNum.RowView(i).(*mat.VecDense))
+		distNum, err := EuclideanDistance(vectorNum, km.ClusterCentroidsNum.RowView(i).(*DenseVector))
 		if err != nil {
 			return -1, -1, fmt.Errorf("Cannot compute nearest cluster for vector %q: %v", index, err)
 		}
@@ -295,16 +282,16 @@ func (km *KPrototypes) near(index int, vectorCat, vectorNum *mat.VecDense) (floa
 }
 
 // Predict assign labels for the set of new vectors.
-func (km *KPrototypes) Predict(X *mat.Dense) (*mat.VecDense, error) {
+func (km *KPrototypes) Predict(X *DenseMatrix) (*DenseVector, error) {
 	if km.IsFitted != true {
-		return mat.NewVecDense(0, nil), errors.New("kmodes: cannot predict labels, model is not fitted yet")
+		return NewDenseVector(0, nil), errors.New("kmodes: cannot predict labels, model is not fitted yet")
 	}
 	xRows, xCols := X.Dims()
-	labelsVec := mat.NewVecDense(xRows, nil)
+	labelsVec := NewDenseVector(xRows, nil)
 
 	// Split data on categorical and numerical.
-	xCat := mat.NewDense(xRows, len(km.CategoricalInd), nil)
-	xNum := mat.NewDense(xRows, xCols-len(km.CategoricalInd), nil)
+	xCat := NewDenseMatrix(xRows, len(km.CategoricalInd), nil)
+	xNum := NewDenseMatrix(xRows, xCols-len(km.CategoricalInd), nil)
 	var lastCat, lastNum int
 	for i := 0; i < xCols; i++ {
 		vec := make([]float64, xRows)
@@ -326,11 +313,11 @@ func (km *KPrototypes) Predict(X *mat.Dense) (*mat.VecDense, error) {
 	xNum = normalizeNum(xNum)
 
 	for i := 0; i < xRows; i++ {
-		catVector := xCat.RowView(i).(*mat.VecDense)
-		numVector := xNum.RowView(i).(*mat.VecDense)
+		catVector := xCat.RowView(i).(*DenseVector)
+		numVector := xNum.RowView(i).(*DenseVector)
 		label, _, err := km.near(i, catVector, numVector)
 		if err != nil {
-			return mat.NewVecDense(0, nil), fmt.Errorf("kmodes Predict: %v", err)
+			return NewDenseVector(0, nil), fmt.Errorf("kmodes Predict: %v", err)
 		}
 		labelsVec.SetVec(i, label)
 	}
@@ -362,7 +349,7 @@ func (km *KPrototypes) LoadModel() error {
 	return err
 }
 
-func normalizeNum(X *mat.Dense) *mat.Dense {
+func normalizeNum(X *DenseMatrix) *DenseMatrix {
 	xRows, xCols := X.Dims()
 	for i := 0; i < xCols; i++ {
 		column := X.ColView(i).(*mat.VecDense).RawVector().Data
@@ -372,4 +359,17 @@ func normalizeNum(X *mat.Dense) *mat.Dense {
 		}
 	}
 	return X
+}
+
+func (km *KPrototypes) validateParameters() error {
+	if km.InitializationFunc == nil {
+		return errors.New("initializationFunction is nil")
+	}
+	if km.DistanceFunc == nil {
+		return errors.New("distanceFunction is nil")
+	}
+	if km.ClustersNumber < 1 || km.MaxIterationNumber < 1 || km.RunsNumber < 1 {
+		return errors.New("wrong initialization parameters (should be >1)")
+	}
+	return nil
 }

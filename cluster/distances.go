@@ -4,16 +4,14 @@ import (
 	"errors"
 	"fmt"
 	"math"
-
-	"gonum.org/v1/gonum/mat"
 )
 
 var (
-	weightVector *mat.VecDense
+	weightVector *DenseVector
 )
 
 // HammingDistance is a basic dissimilarity function for the kmodes algorithm.
-func HammingDistance(a, b *mat.VecDense) (float64, error) {
+func HammingDistance(a, b *DenseVector) (float64, error) {
 	if a.Len() != b.Len() {
 		return -1, errors.New("hamming distance: vectors lengths do not match")
 	}
@@ -28,7 +26,7 @@ func HammingDistance(a, b *mat.VecDense) (float64, error) {
 
 // WeightedHammingDistance dissimilarity function is based on hamming distance
 // but it adds improttance to attributes.
-func WeightedHammingDistance(a, b *mat.VecDense) (float64, error) {
+func WeightedHammingDistance(a, b *DenseVector) (float64, error) {
 	if a.Len() != b.Len() {
 		return -1, errors.New("hamming distance: vectors lengths do not match")
 	}
@@ -46,7 +44,7 @@ func WeightedHammingDistance(a, b *mat.VecDense) (float64, error) {
 }
 
 // EuclideanDistance computes eucdlidean distance between two vectors.
-func EuclideanDistance(a, b *mat.VecDense) (float64, error) {
+func EuclideanDistance(a, b *DenseVector) (float64, error) {
 	if a.Len() != b.Len() {
 		return -1, errors.New("euclidean distance: vectors lengths do not match")
 	}
@@ -60,12 +58,12 @@ func EuclideanDistance(a, b *mat.VecDense) (float64, error) {
 
 // SetWeights sets the weight vector used in WeightedHammingDistance function.
 func SetWeights(newWeights []float64) {
-	weightVector = mat.NewVecDense(len(newWeights), newWeights)
+	weightVector = NewDenseVector(len(newWeights), newWeights)
 }
 
 // ComputeWeights derives weights based on the frequency of attribute values
 // (more different values means lower weight).
-func ComputeWeights(X *mat.Dense, imp float64) []float64 {
+func ComputeWeights(X *DenseMatrix, imp float64) []float64 {
 	xRows, xCols := X.Dims()
 
 	weights := make([]float64, xCols)

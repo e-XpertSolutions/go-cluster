@@ -18,9 +18,9 @@ type KV struct {
 
 // InitHuang implements initialization of cluster centroids based on the
 // frequency of attributes as defined in paper written by Z.Huang in 1998.
-func InitHuang(X *mat.Dense, clustersNumber int, distFunc DistanceFunction) (*mat.Dense, error) {
+func InitHuang(X *DenseMatrix, clustersNumber int, distFunc DistanceFunction) (*DenseMatrix, error) {
 	_, xCols := X.Dims()
-	centroids := mat.NewDense(clustersNumber, xCols, nil)
+	centroids := NewDenseMatrix(clustersNumber, xCols, nil)
 
 	freqTable := CreateFrequencyTable(X)
 	for j := 0; j < clustersNumber; j++ {
@@ -41,9 +41,9 @@ func InitHuang(X *mat.Dense, clustersNumber int, distFunc DistanceFunction) (*ma
 // InitCao implements initialization of cluster centroids based on the frequency
 // and density of attributes as defined in
 //    "A new initialization method for categorical data clustering" by F.Cao(2009)
-func InitCao(X *mat.Dense, clustersNumber int, distFunc DistanceFunction) (*mat.Dense, error) {
+func InitCao(X *DenseMatrix, clustersNumber int, distFunc DistanceFunction) (*DenseMatrix, error) {
 	xRows, xCols := X.Dims()
-	centroids := mat.NewDense(clustersNumber, xCols, nil)
+	centroids := NewDenseMatrix(clustersNumber, xCols, nil)
 
 	// Compute density table and, int the same time find index of vector with
 	// the highest density.
@@ -69,74 +69,65 @@ func InitCao(X *mat.Dense, clustersNumber int, distFunc DistanceFunction) (*mat.
 
 	// Choose first cluster - vector with maximum density.
 	centroids.SetRow(0, X.RawRowView(highestDensityIndex))
-
-	// Find second cluster: maximum value of {distance between vector x in X and
-	// cluster center-centroids(0) multiplied by density of vector x}
-	maxValue := 0.0
-	maxValueIndex := 0
-	for i := 0; i < xRows; i++ {
-		dist, err := distFunc(X.RowView(i).(*mat.VecDense), centroids.RowView(0).(*mat.VecDense))
-		if err != nil {
-			return mat.NewDense(0, 0, nil), fmt.Errorf("cao init: cannot compute second cluster: %v ", err)
-		}
-		val := dist * densityTable[i]
-		if val > maxValue {
-			maxValue = val
-			maxValueIndex = i
-		}
-	}
-	centroids.SetRow(1, X.RawRowView(maxValueIndex))
+	fmt.Println(0, X.RawRowView(highestDensityIndex))
 
 	// Find the rest of clusters centers.
-	for i := 2; i < clustersNumber; i++ {
+	for i := 1; i < clustersNumber; i++ {
 		dd := make([][]float64, i)
 		for z := 0; z < i; z++ {
 			dd[z] = make([]float64, xRows)
 		}
 		for j := 0; j < i; j++ {
 			for k := 0; k < xRows; k++ {
-				dist, err := distFunc(X.RowView(k).(*mat.VecDense), centroids.RowView(j).(*mat.VecDense))
+				dist, err := distFunc(&DenseVector{X.RowView(k).(*mat.VecDense)}, &DenseVector{centroids.RowView(j).(*mat.VecDense)})
 				if err != nil {
-					return mat.NewDense(0, 0, nil), fmt.Errorf("cao init: cannot compute cluster: %v ", err)
+					return NewDenseMatrix(0, 0, nil), fmt.Errorf("cao init: cannot compute cluster: %v ", err)
 				}
 				dd[j][k] = densityTable[k] * dist
 			}
 		}
 
-		// Find minimum value for each column.
-		minValuesTable := make([]float64, xRows)
-		for j := 0; j < xRows; j++ {
-			minValuesTable[j] = math.MaxFloat64
-		}
+		indexMax := findIndexCao(xRows, i, dd)
 
-		for j := 0; j < i; j++ {
-			for k := 0; k < xRows; k++ {
-				if dd[j][k] < minValuesTable[k] {
-					minValuesTable[k] = dd[j][k]
-				}
-			}
-		}
-
-		// Find max value and its index among minValuesTable.
-		maxVal := 0.0
-		indexMax := 0
-		for j := 0; j < xRows; j++ {
-			if minValuesTable[j] > maxVal {
-				maxVal = minValuesTable[j]
-				indexMax = j
-			}
-		}
-
+		fmt.Println(i, X.RawRowView(indexMax))
 		centroids.SetRow(i, X.RawRowView(indexMax))
 	}
 
 	return centroids, nil
 }
 
+func findIndexCao(xRows, i int, dd [][]float64) int {
+	// Find minimum value for each column.
+	minValuesTable := make([]float64, xRows)
+	for j := 0; j < xRows; j++ {
+		minValuesTable[j] = math.MaxFloat64
+	}
+
+	for j := 0; j < i; j++ {
+		for k := 0; k < xRows; k++ {
+			if dd[j][k] < minValuesTable[k] {
+				minValuesTable[k] = dd[j][k]
+			}
+		}
+	}
+
+	// Find max value and its index among minValuesTable.
+	maxVal := 0.0
+	indexMax := 0
+	for j := 0; j < xRows; j++ {
+		if minValuesTable[j] > maxVal {
+			maxVal = minValuesTable[j]
+			indexMax = j
+		}
+	}
+
+	return indexMax
+}
+
 // InitRandom randomly initializes cluster centers - vectors chosen from X table.
-func InitRandom(X *mat.Dense, clustersNumber int, distFunc DistanceFunction) (*mat.Dense, error) {
+func InitRandom(X *DenseMatrix, clustersNumber int, distFunc DistanceFunction) (*DenseMatrix, error) {
 	xRows, xCols := X.Dims()
-	centroids := mat.NewDense(clustersNumber, xCols, nil)
+	centroids := NewDenseMatrix(clustersNumber, xCols, nil)
 	rand.Seed(time.Now().UnixNano())
 
 	for i := 0; i < clustersNumber; i++ {
@@ -147,9 +138,9 @@ func InitRandom(X *mat.Dense, clustersNumber int, distFunc DistanceFunction) (*m
 
 // InitNum initializes cluster centers for numerical data - random
 // initialization.
-func InitNum(X *mat.Dense, clustersNumber int, distFunc DistanceFunction) (*mat.Dense, error) {
+func InitNum(X *DenseMatrix, clustersNumber int, distFunc DistanceFunction) (*DenseMatrix, error) {
 	xRows, xCols := X.Dims()
-	centroids := mat.NewDense(clustersNumber, xCols, nil)
+	centroids := NewDenseMatrix(clustersNumber, xCols, nil)
 	rand.Seed(time.Now().UnixNano())
 
 	for i := 0; i < clustersNumber; i++ {
@@ -161,7 +152,7 @@ func InitNum(X *mat.Dense, clustersNumber int, distFunc DistanceFunction) (*mat.
 
 // CreateFrequencyTable creates frequency table for attributes in given matrix,
 // it returns attributes in frequency descending order.
-func CreateFrequencyTable(X *mat.Dense) [][]KV {
+func CreateFrequencyTable(X *DenseMatrix) [][]KV {
 	xRows, xCols := X.Dims()
 	frequencyTable := make([][]KV, xCols)
 	for i := 0; i < xCols; i++ {
