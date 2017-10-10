@@ -11,8 +11,9 @@ K-modes algorithm is very similar to well-known clustering algorithm k-means. Th
 Implementation of algorithms is based on papers: [HUANG97](#references), [HUANG98](#references), [CAO09](#references) and partially inspired by python implementation of same algorithms: [KMODES](#references).
 
 ## Installation
+
 ```
-go get github.com/e-XpertSolutions/go-cluster/cluster
+go get -u gopkg.in/e-XpertSolutions/go-cluster.v1
 ```
 
 ## Usage
