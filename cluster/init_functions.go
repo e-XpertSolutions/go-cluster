@@ -88,7 +88,6 @@ func InitCao(X *DenseMatrix, clustersNumber int, distFunc DistanceFunction) (*De
 
 		indexMax := findIndexCao(xRows, i, dd)
 
-		fmt.Println(i, X.RawRowView(indexMax))
 		centroids.SetRow(i, X.RawRowView(indexMax))
 	}
 
