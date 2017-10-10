@@ -82,6 +82,13 @@ func ComputeWeights(X *DenseMatrix, imp float64) []float64 {
 		}
 	}
 	m := maxVal(weights)
+	if m == 0 {
+		for i := range weights {
+			weights[i] = 1
+		}
+		return weights
+	}
+
 	mult := imp / m
 	for i := range weights {
 		weights[i] *= mult

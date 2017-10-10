@@ -276,7 +276,7 @@ func (km *KModes) validateParameters() error {
 		return errors.New("initializationFunction is nil")
 	}
 	if km.DistanceFunc == nil {
-		return errors.New("wistanceFunction is nil")
+		return errors.New("distanceFunction is nil")
 	}
 	if km.ClustersNumber < 1 || km.MaxIterationNumber < 1 || km.RunsNumber < 1 {
 		return errors.New("wrong initialization parameters (should be >1)")

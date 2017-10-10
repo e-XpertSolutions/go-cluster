@@ -49,6 +49,7 @@ func NewKPrototypes(dist DistanceFunction, init InitializationFunction, categori
 		Labels:              &DenseVector{VecDense: new(mat.VecDense)},
 		ClusterCentroidsCat: &DenseMatrix{Dense: new(mat.Dense)},
 		ClusterCentroidsNum: &DenseMatrix{Dense: new(mat.Dense)},
+		ClusterCentroids:    &DenseMatrix{Dense: new(mat.Dense)},
 	}
 }
 
@@ -109,8 +110,8 @@ func (km *KPrototypes) FitModel(X *DenseMatrix) error {
 	// Perform initial assignements to clusters - in order to fill in frequency
 	// table.
 	for i := 0; i < xRows; i++ {
-		rowCat := xCat.RowView(i).(*DenseVector)
-		rowNum := xNum.RowView(i).(*DenseVector)
+		rowCat := &DenseVector{xCat.RowView(i).(*mat.VecDense)}
+		rowNum := &DenseVector{xNum.RowView(i).(*mat.VecDense)}
 		newLabel, _, err := km.near(i, rowCat, rowNum)
 		km.Labels.SetVec(i, newLabel)
 		km.LabelsCounter[int(newLabel)]++
@@ -183,8 +184,8 @@ func (km *KPrototypes) iteration(xNum, xCat *DenseMatrix) (float64, bool, error)
 	_, xColsCat := xCat.Dims()
 
 	for i := 0; i < xRowsNum; i++ {
-		rowCat := xCat.RowView(i).(*DenseVector)
-		rowNum := xNum.RowView(i).(*DenseVector)
+		rowCat := &DenseVector{xCat.RowView(i).(*mat.VecDense)}
+		rowNum := &DenseVector{xNum.RowView(i).(*mat.VecDense)}
 		newLabel, cost, err := km.near(i, rowCat, rowNum)
 		if err != nil {
 			return totalCost, change, fmt.Errorf("iteration error: %v", err)
@@ -264,11 +265,11 @@ func (km *KPrototypes) near(index int, vectorCat, vectorNum *DenseVector) (float
 	distance = math.MaxFloat64
 
 	for i := 0; i < km.ClustersNumber; i++ {
-		distCat, err := km.DistanceFunc(vectorCat, km.ClusterCentroidsCat.RowView(i).(*DenseVector))
+		distCat, err := km.DistanceFunc(vectorCat, &DenseVector{km.ClusterCentroidsCat.RowView(i).(*mat.VecDense)})
 		if err != nil {
 			return -1, -1, fmt.Errorf("Cannot compute nearest cluster for vector %q: %v", index, err)
 		}
-		distNum, err := EuclideanDistance(vectorNum, km.ClusterCentroidsNum.RowView(i).(*DenseVector))
+		distNum, err := EuclideanDistance(vectorNum, &DenseVector{km.ClusterCentroidsNum.RowView(i).(*mat.VecDense)})
 		if err != nil {
 			return -1, -1, fmt.Errorf("Cannot compute nearest cluster for vector %q: %v", index, err)
 		}
@@ -313,8 +314,8 @@ func (km *KPrototypes) Predict(X *DenseMatrix) (*DenseVector, error) {
 	xNum = normalizeNum(xNum)
 
 	for i := 0; i < xRows; i++ {
-		catVector := xCat.RowView(i).(*DenseVector)
-		numVector := xNum.RowView(i).(*DenseVector)
+		catVector := &DenseVector{xCat.RowView(i).(*mat.VecDense)}
+		numVector := &DenseVector{xNum.RowView(i).(*mat.VecDense)}
 		label, _, err := km.near(i, catVector, numVector)
 		if err != nil {
 			return NewDenseVector(0, nil), fmt.Errorf("kmodes Predict: %v", err)
