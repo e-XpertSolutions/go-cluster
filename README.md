@@ -3,6 +3,7 @@
 [![GoDoc](https://godoc.org/github.com/e-XpertSolutions/go-cluster/cluster?status.png)](http://godoc.org/github.com/e-XpertSolutions/go-cluster/cluster)
 [![License](https://img.shields.io/badge/license-BSD%203--Clause-yellow.svg?style=flat)](https://github.com/e-XpertSolutions/go-cluster/blob/master/LICENSE)
 [![GoReport](https://goreportcard.com/badge/github.com/e-XpertSolutions/go-cluster)](https://goreportcard.com/report/github.com/e-XpertSolutions/go-cluster)
+[![Travis](https://travis-ci.org/e-XpertSolutions/go-cluster.svg?branch=master)](https://travis-ci.org/e-XpertSolutions/go-cluster)
 
 GO implementation of clustering algorithms: k-modes and k-prototypes.
 
