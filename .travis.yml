@@ -3,5 +3,5 @@ go:
     - 1.8
     - 1.9
     - tip
-script: go test ./cluster
+script: go test -v ./cluster
 
