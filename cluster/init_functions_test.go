@@ -20,14 +20,14 @@ func initVectorsInit() {
 	cen1 = NewDenseMatrix(2, 2, []float64{1, 1, 1, 2})
 
 	want1 = make([][]KV, 2)
-	want1[0] = []KV{KV{Key: 1, Value: 7}}
-	want1[1] = []KV{KV{Key: 2, Value: 4}, KV{Key: 1, Value: 3}}
+	want1[0] = []KV{{Key: 1, Value: 7}}
+	want1[1] = []KV{{Key: 2, Value: 4}, {Key: 1, Value: 3}}
 
 	want2 = make([][]KV, 1)
-	want2[0] = []KV{KV{Key: 1, Value: 2}, KV{Key: 2, Value: 2}}
+	want2[0] = []KV{{Key: 1, Value: 2}, {Key: 2, Value: 2}}
 
 	want3 = make([][]KV, 1)
-	want3[0] = []KV{KV{Key: 1, Value: 3}, KV{Key: 2, Value: 3}, KV{Key: 3, Value: 3}, KV{Key: 4, Value: 1}}
+	want3[0] = []KV{{Key: 1, Value: 3}, {Key: 2, Value: 3}, {Key: 3, Value: 3}, {Key: 4, Value: 1}}
 }
 
 func TestCreateFrequencyTable(t *testing.T) {
