@@ -69,7 +69,6 @@ func InitCao(X *DenseMatrix, clustersNumber int, distFunc DistanceFunction) (*De
 
 	// Choose first cluster - vector with maximum density.
 	centroids.SetRow(0, X.RawRowView(highestDensityIndex))
-	fmt.Println(0, X.RawRowView(highestDensityIndex))
 
 	// Find the rest of clusters centers.
 	for i := 1; i < clustersNumber; i++ {
