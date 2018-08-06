@@ -273,7 +273,7 @@ func (km *KPrototypes) near(index int, vectorCat, vectorNum *DenseVector) (float
 		if err != nil {
 			return -1, -1, fmt.Errorf("Cannot compute nearest cluster for vector %q: %v", index, err)
 		}
-		dist := distCat + km.Gamma*distNum
+		dist := km.Gamma*distCat + distNum
 		if dist < distance {
 			distance = dist
 			newLabel = float64(i)
