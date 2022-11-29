@@ -4,6 +4,8 @@ import (
 	"reflect"
 	"sort"
 	"testing"
+
+	"gonum.org/v1/gonum/mat"
 )
 
 var m1, m2 *DenseMatrix
@@ -157,14 +159,14 @@ func TestKModes_Predict(t *testing.T) {
 			train:   m1,
 			pred:    NewDenseMatrix(1, 2, []float64{1, 1}),
 			wantErr: true,
-			want:    NewDenseVector(0, nil)},
+			want:    &DenseVector{&mat.VecDense{}}},
 
 		{km: &KModes{DistanceFunc: HammingDistance, InitializationFunc: InitCao, ClustersNumber: 2, RunsNumber: 1, MaxIterationNumber: 10, WeightVectors: [][]float64{{1, 1, 1}}, ModelPath: "km.txt"},
 			train:   m1,
 			fit:     true,
 			pred:    NewDenseMatrix(1, 3, []float64{1, 1, 1}),
 			wantErr: true,
-			want:    NewDenseVector(0, nil)},
+			want:    &DenseVector{&mat.VecDense{}}},
 	}
 	for _, tt := range tests {
 		if tt.fit {

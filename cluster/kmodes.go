@@ -110,7 +110,7 @@ func (km *KModes) FitModel(X *DenseMatrix) error {
 		if err != nil {
 			return fmt.Errorf("KMeans error at iteration %d: %v", i, err)
 		}
-		if change == false {
+		if !change {
 
 			km.IsFitted = true
 			return nil
@@ -184,7 +184,7 @@ func (km *KModes) iteration(X *DenseMatrix) (float64, bool, error) {
 
 	// Recompute cluster centers for all clusters with changes.
 	for i, elem := range changed {
-		if elem == true {
+		if elem {
 			//find new values for clusters centers
 			km.findNewCenters(i, xCols)
 		}
@@ -199,7 +199,7 @@ func (km *KModes) near(index int, vector *DenseVector) (float64, float64, error)
 	for i := 0; i < km.ClustersNumber; i++ {
 		dist, err := km.DistanceFunc(vector, &DenseVector{km.ClusterCentroids.RowView(i).(*mat.VecDense)})
 		if err != nil {
-			return -1, -1, fmt.Errorf("Cannot compute nearest cluster for vector %q: %v", index, err)
+			return -1, -1, fmt.Errorf("cannot compute nearest cluster for vector %q: %v", index, err)
 		}
 		if dist < distance {
 			distance = dist
@@ -232,15 +232,15 @@ func findHighestMapValue(m map[float64]float64) (float64, bool) {
 
 // Predict assign labels for the set of new vectors.
 func (km *KModes) Predict(X *DenseMatrix) (*DenseVector, error) {
-	if km.IsFitted != true {
-		return NewDenseVector(0, nil), errors.New("kmodes: cannot predict labels, model is not fitted yet")
+	if !km.IsFitted {
+		return &DenseVector{&mat.VecDense{}}, errors.New("kmodes: cannot predict labels, model is not fitted yet")
 	}
 	xRows, _ := X.Dims()
 	labelsVec := NewDenseVector(xRows, nil)
 	for i := 0; i < xRows; i++ {
 		label, _, err := km.near(i, &DenseVector{X.RowView(i).(*mat.VecDense)})
 		if err != nil {
-			return NewDenseVector(0, nil), fmt.Errorf("kmodes Predict: %v", err)
+			return &DenseVector{&mat.VecDense{}}, fmt.Errorf("kmodes Predict: %v", err)
 		}
 		labelsVec.SetVec(i, label)
 	}

@@ -3,6 +3,8 @@ package cluster
 import (
 	"reflect"
 	"testing"
+
+	"gonum.org/v1/gonum/mat"
 )
 
 var cn1, cc1 *DenseMatrix
@@ -80,7 +82,7 @@ func TestKPrototypes_Predict(t *testing.T) {
 			train:   m1,
 			pred:    NewDenseMatrix(1, 2, []float64{1, 1}),
 			wantErr: true,
-			want:    NewDenseVector(0, nil)},
+			want:    &DenseVector{&mat.VecDense{}}},
 	}
 	for _, tt := range tests {
 		if tt.fit {

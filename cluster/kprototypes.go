@@ -137,7 +137,7 @@ func (km *KPrototypes) FitModel(X *DenseMatrix) error {
 		if err != nil {
 			return fmt.Errorf("KMeans error at iteration %d: %v", i, err)
 		}
-		if change == false {
+		if !change {
 			km.IsFitted = true
 			return nil
 		}
@@ -217,7 +217,7 @@ func (km *KPrototypes) iteration(xNum, xCat *DenseMatrix) (float64, bool, error)
 
 	// Recompute cluster centers for all clusters with changes.
 	for i, elem := range changed {
-		if elem == true {
+		if elem {
 			// Find new values for clusters centers.
 			km.findNewCenters(xColsCat, xNumCols, i, xNum)
 
@@ -267,11 +267,11 @@ func (km *KPrototypes) near(index int, vectorCat, vectorNum *DenseVector) (float
 	for i := 0; i < km.ClustersNumber; i++ {
 		distCat, err := km.DistanceFunc(vectorCat, &DenseVector{km.ClusterCentroidsCat.RowView(i).(*mat.VecDense)})
 		if err != nil {
-			return -1, -1, fmt.Errorf("Cannot compute nearest cluster for vector %q: %v", index, err)
+			return -1, -1, fmt.Errorf("cannot compute nearest cluster for vector %q: %v", index, err)
 		}
 		distNum, err := EuclideanDistance(vectorNum, &DenseVector{km.ClusterCentroidsNum.RowView(i).(*mat.VecDense)})
 		if err != nil {
-			return -1, -1, fmt.Errorf("Cannot compute nearest cluster for vector %q: %v", index, err)
+			return -1, -1, fmt.Errorf("cannot compute nearest cluster for vector %q: %v", index, err)
 		}
 		dist := km.Gamma*distCat + distNum
 		if dist < distance {
@@ -284,8 +284,8 @@ func (km *KPrototypes) near(index int, vectorCat, vectorNum *DenseVector) (float
 
 // Predict assign labels for the set of new vectors.
 func (km *KPrototypes) Predict(X *DenseMatrix) (*DenseVector, error) {
-	if km.IsFitted != true {
-		return NewDenseVector(0, nil), errors.New("kmodes: cannot predict labels, model is not fitted yet")
+	if !km.IsFitted {
+		return &DenseVector{&mat.VecDense{}}, errors.New("kmodes: cannot predict labels, model is not fitted yet")
 	}
 	xRows, xCols := X.Dims()
 	labelsVec := NewDenseVector(xRows, nil)
