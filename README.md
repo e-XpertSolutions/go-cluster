@@ -6,7 +6,7 @@
 [![Travis](https://travis-ci.org/e-XpertSolutions/go-cluster.svg?branch=master)](https://travis-ci.org/e-XpertSolutions/go-cluster)
 [![cover.run go](https://cover.run/go/github.com/e-XpertSolutions/go-cluster/cluster.svg)](https://cover.run/go/github.com/e-XpertSolutions/go-cluster/cluster)
 
-GO implementation of clustering algorithms: k-modes and k-prototypes.
+Go implementation of clustering algorithms: k-modes and k-prototypes.
 
 K-modes algorithm is very similar to well-known clustering algorithm k-means. The difference is how the distance is computed. In k-means Euclidean distance between two vectors is most commonly used. While it works well for numerical, continuous data it is not suitable to use it with categorical data as it is impossible to compute the distance between values like ‘Europe’ and ‘Africa’. This is why in k-modes, the Hamming distance between vectors is used - it shows how many elements of two vectors is different. It is a good alternative for one-hot encoding while dealing with large number of categories for one feature. K-prototypes is used to cluster mixed data (both categorical and numerical).
 
@@ -15,7 +15,7 @@ Implementation of algorithms is based on papers: [HUANG97](#references), [HUANG9
 ## Installation
 
 ```
-go get -u gopkg.in/e-XpertSolutions/go-cluster.v1
+go get github.com/e-XpertSolutions/go-cluster/v2
 ```
 
 ## Usage
